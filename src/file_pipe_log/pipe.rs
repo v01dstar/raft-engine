@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crossbeam::utils::CachePadded;
 use fail::fail_point;
+use fs2::FileExt;
 use log::error;
 use parking_lot::{Mutex, MutexGuard, RwLock};
 
@@ -467,6 +468,18 @@ pub struct DualPipes<F: FileSystem> {
     _dir_locks: Vec<StdFile>,
 }
 
+impl<F: FileSystem> Drop for DualPipes<F> {
+    fn drop(&mut self) {
+        println!("Dropping DualPipes");
+        for dir_lock in self._dir_locks.drain(..) {
+            println!("Unlocking directory");
+            if let Err(e) = dir_lock.unlock() {
+                println!("error while unlocking directory: {e:?}");
+            }
+        }
+    }
+}
+
 impl<F: FileSystem> DualPipes<F> {
     /// Open a new [`DualPipes`]. Assumes the two [`SinglePipe`]s share the
     /// same directory, and that directory is locked by `dir_lock`.
@@ -553,6 +566,7 @@ pub(crate) fn find_available_dir(paths: &Paths, target_size: usize) -> PathId {
 #[cfg(test)]
 mod tests {
     use std::path::Path;
+    use std::vec;
     use tempfile::Builder;
 
     use super::super::format::LogFileFormat;

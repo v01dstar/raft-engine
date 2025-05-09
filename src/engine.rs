@@ -419,6 +419,7 @@ where
     P: PipeLog,
 {
     fn drop(&mut self) {
+        println!("Drop raft engine...");
         self.tx.lock().unwrap().send(()).unwrap();
         if let Some(t) = self.metrics_flusher.take() {
             t.join().unwrap();
